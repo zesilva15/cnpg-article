@@ -1,0 +1,60 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cnpg
+---
+apiVersion: v1
+data:
+  password: VHhWZVE0bk44MlNTaVlIb3N3cU9VUlp2UURhTDRLcE5FbHNDRUVlOWJ3RHhNZDczS2NrSWVYelM1Y1U2TGlDMg==
+  username: YXBw
+kind: Secret
+metadata:
+  name: cluster-cnpg-app-user
+  namespace: cnpg
+type: kubernetes.io/basic-auth
+---
+apiVersion: v1
+data:
+  password: dU4zaTFIaDBiWWJDYzRUeVZBYWNCaG1TemdxdHpxeG1PVmpBbjBRSUNoc0pyU211OVBZMmZ3MnE4RUtLTHBaOQ==
+  username: cG9zdGdyZXM=
+kind: Secret
+metadata:
+  name: cluster-cnpg-superuser
+  namespace: cnpg
+type: kubernetes.io/basic-auth
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: cluster-cnpg
+  namespace: cnpg
+spec:
+  description: "This is an example cluster"
+  instances: 3
+  imageName: ghcr.io/cloudnative-pg/postgis:15-3.3
+  bootstrap:
+    initdb:
+      database: postgres
+      owner: postgres
+      secret:
+        name: cluster-cnpg-app-user
+      postInitTemplateSQL:
+        - CREATE EXTENSION postgis;
+        - CREATE EXTENSION postgis_topology;
+        - CREATE EXTENSION fuzzystrmatch;
+        - CREATE EXTENSION postgis_tiger_geocoder;
+  storage:
+    size: 1Gi
+    storageClass: standard
+  backup:
+    barmanObjectStore:
+      destinationPath: "gs://cnpg-backups/cluster-cnpg"
+      googleCredentials:
+        gkeEnvironment: true
+  serviceAccountTemplate:
+    metadata:
+      annotations:
+        iam.gke.io/gcp-service-account: cnpg@<project>.iam.gserviceaccount.com
+  monitoring:
+    enablePodMonitor: true
